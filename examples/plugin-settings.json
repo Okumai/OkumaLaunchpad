@@ -1,0 +1,11 @@
+{
+  "id": "launchpad.okuma.dev",
+  "enabled": true,
+  "scrollSensitivity": 3,
+  "openDuration": 90,
+  "closeDuration": 70,
+  "searchWidth": 300,
+  "cellSize": 140,
+  "iconSize": 64,
+  "backgroundOpacity": 0.94
+}

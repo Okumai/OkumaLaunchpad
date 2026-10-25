@@ -29,16 +29,21 @@ hl.gesture({
   },
 })
 
--- Hyprland 0.56.2 calls expanding distance "pinchin". Verify on other versions.
--- The recognizer has already applied its native threshold before start runs.
+-- Read the scale rather than version-dependent pinch direction names.
+-- Three-finger inward pinching never opens the launcher.
+local closeFired = false
+local function spread(e)
+  if not closeFired and e.scale and e.scale >= 1.10 then
+    closeFired = true
+    hl.exec_cmd("omarchy-shell shell hide launchpad.okuma.dev")
+  end
+end
 hl.gesture({
   fingers = 3,
-  direction = "pinchin",
+  direction = "pinch",
   action = {
-    start = function(e)
-      if e.scale and e.scale > 1 then
-        hl.exec_cmd("omarchy-shell shell hide launchpad.okuma.dev")
-      end
-    end,
+    start = function(e) closeFired = false; spread(e) end,
+    update = spread,
+    finish = function(e) closeFired = false end,
   },
 })

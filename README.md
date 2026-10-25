@@ -59,8 +59,26 @@ omarchy-shell shell hide launchpad.okuma.dev
 omarchy-shell shell toggle launchpad.okuma.dev '{}'
 ```
 
-See [docs/integration.md](docs/integration.md) before enabling gestures or migrating
-from the earlier standalone launcher. Creating this repository does not change your desktop.
+**Plugin installation does not register touchpad gestures.** Enable the plugin first,
+then run the opt-in setup command on each device (use your actual installation path):
+
+```bash
+python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/setup-gestures.py install
+```
+
+The command backs up the existing user `input.lua`, installs a managed binding block,
+reloads Hyprland, and checks configuration errors. It refuses obvious duplicate pinch
+bindings; review other included files too. It does not change packaged files or global
+touchpad settings. The user input.lua must already be loaded by your Hyprland config.
+
+```bash
+python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/doctor.py
+python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/setup-gestures.py remove
+```
+
+See [docs/integration.md](docs/integration.md) before migrating from the earlier
+standalone launcher. Plugin updates do not automatically rewrite gesture bindings;
+rerun setup after updating. Creating this repository does not change your desktop.
 
 ## Controls
 

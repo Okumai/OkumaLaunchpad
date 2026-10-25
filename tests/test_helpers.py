@@ -31,6 +31,29 @@ class ProjectTests(unittest.TestCase):
                 path.read_text(encoding="utf-8").replace("\u014cKUMA", "OKUMA").encode("ascii")
 
 
+class GestureSetupTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("setup", ROOT / "setup-gestures.py")
+        cls.setup = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.setup)
+
+    def test_install_update_remove(self):
+        original = "-- Personal settings\nhl.config({})\n"
+        installed = self.setup.configure(original, "-- Example\nhl.gesture({})")
+        self.assertIn(self.setup.BEGIN, installed)
+        self.assertEqual(self.setup.configure(installed, "-- Example\nhl.gesture({})"), installed)
+        removed = self.setup.configure(installed, "", remove=True)
+        self.assertNotIn(self.setup.BEGIN, removed)
+        self.assertIn("hl.config({})", removed)
+
+    def test_duplicates_and_malformed_blocks(self):
+        with self.assertRaises(ValueError):
+            self.setup.configure('hl.gesture({direction="pinch"})', "example")
+        with self.assertRaises(ValueError):
+            self.setup.configure(self.setup.BEGIN, "example")
+
+
 class IconTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

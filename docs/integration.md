@@ -2,8 +2,17 @@
 
 ## Native gestures
 
-After installing and enabling the plugin, review `examples/hyprland.lua` and add its
-rules to your user Hyprland Lua configuration. Back up the affected files first.
+Installing or enabling an Omarchy plugin does not install compositor gesture bindings.
+On each device, run `python3 /path/to/plugin/setup-gestures.py install` after enabling
+the plugin. The setup tool backs up the existing user input.lua, adds a managed block,
+reloads Hyprland, and checks configuration errors, restoring the original on failure.
+Use `remove` to remove only that block. Run `doctor.py` for non-privileged diagnostics.
+Custom layouts can use `--config /path/to/loaded/input.lua`; `--no-reload` is for offline
+editing and requires manual reload/validation. Included configuration conflicts must
+still be reviewed manually. The tool does not prove hardware gesture support.
+
+Alternatively, review `examples/hyprland.lua` and add its rules manually to your user
+Hyprland Lua configuration. Back up the affected files first.
 Do not add duplicate bindings for the same finger count and direction. Validate:
 
 ```bash
@@ -14,8 +23,8 @@ hyprctl configerrors
 Four-finger pinching opens; three/four-finger spreading closes. Callbacks fire at
 recognition, not release. Commands are idempotent; a four-finger gesture fires once.
 Hyprland 0.56.2 gates pinch callbacks until distance changes by about 10%. A lower
-Lua threshold cannot bypass that gate. Its `pinchin` name means expanding distance.
-Verify that mapping on other versions. libinput 1.32's investigated path supports
+Lua threshold cannot bypass that gate. Both bindings use generic `pinch` callbacks
+and read scale directly, avoiding version-dependent inward/outward direction names. libinput 1.32's investigated path supports
 at most four fingers. A three-finger movement classified as dragging will not emit
 a pinch event. No privileged input reader or additional device permissions are used.
 

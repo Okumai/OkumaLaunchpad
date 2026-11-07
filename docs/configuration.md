@@ -1,6 +1,6 @@
 # Configuration
 
-Merge settings into the existing `launchpad.okuma.dev` entry in the shell's `plugins`
+Merge settings into the existing `okuma.dev_launchpad4omarchy` entry in the shell's `plugins`
 array. Do not replace the entire shell configuration. `XDG_CONFIG_HOME` is respected.
 Settings reload live. Numeric values are clamped to the ranges below; other types
 use defaults.

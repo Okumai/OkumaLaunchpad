@@ -6,8 +6,8 @@
 omarchy plugin validate /path/to/OkumarchyLaunchpad
 omarchy plugin list --json
 omarchy-shell shell rescanPlugins
-omarchy-shell shell summon launchpad.okuma.dev '{}'
-omarchy-shell shell call launchpad.okuma.dev status ''
+omarchy-shell shell summon okuma.dev_launchpad4omarchy '{}'
+omarchy-shell shell call okuma.dev_launchpad4omarchy status ''
 ```
 
 The plugin must be enabled and the current Omarchy shell must support keep-loaded
@@ -18,7 +18,7 @@ Only restart the shell when necessary; it also hosts the bar and other plugins.
 
 ```bash
 python3 /path/to/OkumarchyLaunchpad/index-icons.py
-omarchy-shell shell call launchpad.okuma.dev iconDiagnostics ''
+omarchy-shell shell call okuma.dev_launchpad4omarchy iconDiagnostics ''
 ```
 
 The asynchronous index scans XDG icon directories and pixmaps on startup, on app

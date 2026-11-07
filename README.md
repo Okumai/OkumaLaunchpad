@@ -2,7 +2,9 @@
 
 A fast, theme-aware fullscreen application launcher for Omarchy's Quickshell desktop.
 
-Project: https://github.com/OKUMARCHY/Launchpad
+Project: https://github.com/Okumai/Launchpad
+
+Author: ŌKUMA | Plugin ID: `okuma.dev_launchpad4omarchy`
 
 ## Features
 
@@ -33,37 +35,54 @@ Legacy Waybar-based Omarchy installations and other compositors are not supporte
 
 ## Installation
 
-Once this repository is published:
+### Recommended: managed installation with default gestures
 
 ```bash
-omarchy plugin add https://github.com/OKUMARCHY/Launchpad.git --enable
+omarchy plugin add https://github.com/Okumai/Launchpad.git
+# Review the installed source before enabling it.
+bash ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/install.sh
 ```
 
-For a local checkout, use a clean target:
+The installer validates and enables the plugin, checks that it responds, then installs
+and validates gesture bindings by default. It explains the target files and requests
+confirmation. Plugins run unsandboxed as your user. No packaged files are modified.
+The `omarchy plugin add` command alone cannot run this integration step automatically.
+
+### Local checkout
 
 ```bash
-mkdir -p ~/.config/omarchy/plugins
-cp -a /path/to/OkumarchyLaunchpad ~/.config/omarchy/plugins/launchpad.okuma.dev
-omarchy plugin validate ~/.config/omarchy/plugins/launchpad.okuma.dev
-omarchy-shell shell rescanPlugins
-omarchy plugin enable launchpad.okuma.dev
-omarchy restart shell
+cd /path/to/OkumarchyLaunchpad
+./install.sh
 ```
 
-Do not overwrite an existing plugin directory with `cp`. Review the source before enabling:
-plugins run unsandboxed as your user. No packaged Omarchy files need modification.
+A new local installation is a snapshot without Git metadata. An existing target is
+reused, never overwritten. For Git-managed updates, prefer the managed installation
+above. Local snapshot updates must be reviewed and applied separately.
+
+Options:
 
 ```bash
-omarchy-shell shell summon launchpad.okuma.dev '{}'
-omarchy-shell shell hide launchpad.okuma.dev
-omarchy-shell shell toggle launchpad.okuma.dev '{}'
+./install.sh --no-gestures   # Enable the plugin without changing touchpad bindings.
+./install.sh --yes          # Explicit consent for unattended installation.
+./install.sh --config ~/.config/hypr/input.lua
 ```
 
-**Plugin installation does not register touchpad gestures.** Enable the plugin first,
-then run the opt-in setup command on each device (use your actual installation path):
+Gesture setup refuses obvious conflicting pinch bindings and backs up user config.
+If gesture validation fails, that file is restored. Plugin installation/enabling steps
+already completed are retained and reported; the installer is not a full transaction.
+It never forces a restart of the shared Omarchy shell.
 
 ```bash
-python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/setup-gestures.py install
+omarchy-shell shell summon okuma.dev_launchpad4omarchy '{}'
+omarchy-shell shell hide okuma.dev_launchpad4omarchy
+omarchy-shell shell toggle okuma.dev_launchpad4omarchy '{}'
+```
+
+If the plugin was enabled directly with `omarchy plugin add --enable`, complete setup
+with `install.sh`, or run the gesture-only command on each device:
+
+```bash
+python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/setup-gestures.py install
 ```
 
 The command backs up the existing user `input.lua`, installs a managed binding block,
@@ -72,13 +91,16 @@ bindings; review other included files too. It does not change packaged files or 
 touchpad settings. The user input.lua must already be loaded by your Hyprland config.
 
 ```bash
-python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/doctor.py
-python3 ~/.config/omarchy/plugins/launchpad.okuma.dev/setup-gestures.py remove
+python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/doctor.py
+python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/setup-gestures.py remove
 ```
 
-See [docs/integration.md](docs/integration.md) before migrating from the earlier
-standalone launcher. Plugin updates do not automatically rewrite gesture bindings;
-rerun setup after updating. Creating this repository does not change your desktop.
+See [docs/integration.md](docs/integration.md) for desktop integration details.
+Plugin updates do not automatically rewrite gesture bindings;
+rerun `bash ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/install.sh` after updating
+to refresh the managed block without duplicating bindings. The plugin never edits
+Hyprland configuration during login or hot reload. Creating this repository does not
+change your desktop.
 
 ## Controls
 
@@ -101,11 +123,11 @@ Preserve all other shell settings. See [docs/configuration.md](docs/configuratio
 and [examples/plugin-settings.json](examples/plugin-settings.json).
 
 ```bash
-omarchy plugin disable launchpad.okuma.dev
-omarchy plugin enable launchpad.okuma.dev
-omarchy plugin update launchpad.okuma.dev
-omarchy-shell shell call launchpad.okuma.dev status ''
-omarchy-shell shell call launchpad.okuma.dev iconDiagnostics ''
+omarchy plugin disable okuma.dev_launchpad4omarchy
+omarchy plugin enable okuma.dev_launchpad4omarchy
+omarchy plugin update okuma.dev_launchpad4omarchy
+omarchy-shell shell call okuma.dev_launchpad4omarchy status ''
+omarchy-shell shell call okuma.dev_launchpad4omarchy iconDiagnostics ''
 ```
 
 Git-managed updates require installation through `omarchy plugin add`.
@@ -119,6 +141,8 @@ omarchy plugin validate .
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/troubleshooting.md](docs/troubleshooting.md).
+This repository has no GitHub Actions workflows; tests run locally on your own device.
+See [source publication and local testing](docs/publication.md).
 
 ## Limitations
 

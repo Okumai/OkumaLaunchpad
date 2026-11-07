@@ -23,7 +23,7 @@ def configure(text, source, remove=False):
         text = text[:start] + text[finish:]
     if remove:
         return text
-    # Never silently override the original standalone launcher or other pinches.
+    # Never silently override another launcher or existing pinch bindings.
     active = "\n".join(line.split("--", 1)[0] for line in text.splitlines())
     if "launchpad" in active.lower() or "pinch" in active.lower():
         raise ValueError("Existing Launchpad/pinch configuration detected. Remove duplicate bindings manually before installing")
@@ -56,13 +56,19 @@ def main():
     if args.no_reload:
         print("Run hyprctl reload and hyprctl configerrors before using gestures")
         return
-    reload_result = subprocess.run(["hyprctl", "reload"], capture_output=True, text=True)
-    errors = subprocess.run(["hyprctl", "configerrors"], capture_output=True, text=True)
-    if reload_result.returncode or errors.returncode or errors.stdout.strip():
+    try:
+        reload_result = subprocess.run(["hyprctl", "reload"], capture_output=True, text=True, timeout=10)
+        errors = subprocess.run(["hyprctl", "configerrors"], capture_output=True, text=True, timeout=10)
+        if reload_result.returncode or errors.returncode or errors.stdout.strip():
+            raise RuntimeError(reload_result.stderr + errors.stdout + errors.stderr)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         path.write_text(original)
-        subprocess.run(["hyprctl", "reload"], check=False)
-        subprocess.run(["hyprctl", "configerrors"], check=False)
-        raise SystemExit("Validation failed; original config restored. " + reload_result.stderr + errors.stdout + errors.stderr)
+        try:
+            subprocess.run(["hyprctl", "reload"], check=False, timeout=10)
+            subprocess.run(["hyprctl", "configerrors"], check=False, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            pass
+        raise SystemExit(f"Validation failed; original config restored. {error}")
     print("Hyprland configuration validated. Confirm that the plugin is enabled and test a real pinch.")
 
 

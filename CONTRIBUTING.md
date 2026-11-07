@@ -3,6 +3,13 @@
 Use English for code, comments, UI labels, documentation, and tests. The branded
 author name may retain its macron. Application-supplied names are not translated.
 
+The plugin ID is `okuma.dev_launchpad4omarchy`, the manifest author is `ŌKUMA`, and the
+canonical repository is `https://github.com/Okumai/Launchpad`. Keep runtime IDs,
+examples, and management commands synchronized with the manifest.
+
+Read [docs/publication.md](docs/publication.md) before uploading code or submitting
+to a marketplace. Run all checks locally; this repository has no hosted workflows.
+
 ## Automated checks
 
 ```bash
@@ -28,7 +35,7 @@ and project language. They do not replace QML loading or physical gesture tests.
 - Test four-finger open and three/four-finger close on real hardware.
 - Confirm existing workspace swipes, bar gestures, and three-finger dragging remain.
 - Test disable/enable, plugin reload, logout/login, and system reboot.
-- Confirm the original standalone launcher is not also bound during migration.
+- Confirm no other launcher uses the same gesture bindings.
 
 Never modify packaged `/usr/share/omarchy` files for installation or testing.
 Describe the tested Omarchy/Quickshell/Hyprland APIs when reporting compatibility.

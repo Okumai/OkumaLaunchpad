@@ -9,7 +9,7 @@ import qs.Commons as Commons
 Item {
     id: root
     property var shell: null
-    readonly property string pluginId: "launchpad.okuma.dev"
+    readonly property string pluginId: "okuma.dev_launchpad4omarchy"
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, ""))
     property var settings: ({})
     readonly property string fontFamily: shell && shell.bar ? shell.bar.fontFamily : Commons.Style.font.family

@@ -17,7 +17,8 @@ class ProjectTests(unittest.TestCase):
     def test_identity(self):
         manifest = json.loads((ROOT / "manifest.json").read_text())
         example = json.loads((ROOT / "examples/plugin-settings.json").read_text())
-        self.assertEqual(manifest["id"], "launchpad.okuma.dev")
+        self.assertEqual(manifest["id"], "okuma.dev_launchpad4omarchy")
+        self.assertEqual(manifest["author"], "\u014cKUMA")
         self.assertEqual(example["id"], manifest["id"])
         self.assertTrue(manifest["keepLoaded"])
         self.assertTrue((ROOT / manifest["entryPoints"]["panel"]).is_file())
@@ -29,6 +30,53 @@ class ProjectTests(unittest.TestCase):
                 continue
             with self.subTest(path=path):
                 path.read_text(encoding="utf-8").replace("\u014cKUMA", "OKUMA").encode("ascii")
+
+
+class InstallerTests(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("installer", ROOT / "install.py")
+        self.installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.installer)
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.config_home = Path(self.temp.name)
+        env = patch.dict(os.environ, XDG_CONFIG_HOME=str(self.config_home))
+        env.start()
+        self.addCleanup(env.stop)
+
+    def args(self, no_gestures=False):
+        import argparse
+        return argparse.Namespace(no_gestures=no_gestures, yes=True, config=None)
+
+    def test_install_default_gestures_and_repeat(self):
+        config = self.config_home / "hypr/input.lua"
+        config.parent.mkdir()
+        config.write_text("-- User settings\n")
+        with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run, patch.object(self.installer, "verify_plugin"):
+            self.installer.install(self.args())
+            target = self.config_home / "omarchy/plugins/okuma.dev_launchpad4omarchy"
+            self.assertTrue((target / "manifest.json").is_file())
+            self.assertFalse((target / ".git").exists())
+            self.assertTrue(any("setup-gestures.py" in str(c) for c in run.call_args_list))
+            sentinel = target / "preserve.txt"
+            sentinel.write_text("Keep local changes")
+            self.installer.install(self.args())
+            self.assertTrue(sentinel.exists())
+
+    def test_skip_gestures_needs_no_input_config(self):
+        with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run, patch.object(self.installer, "verify_plugin"):
+            self.installer.install(self.args(no_gestures=True))
+            self.assertFalse(any("setup-gestures.py" in str(c) for c in run.call_args_list))
+
+    def test_conflict_prevents_installation(self):
+        config = self.config_home / "hypr/input.lua"
+        config.parent.mkdir()
+        config.write_text('hl.gesture({direction="pinch"})')
+        with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run:
+            with self.assertRaises(ValueError):
+                self.installer.install(self.args())
+            run.assert_not_called()
+            self.assertFalse((self.config_home / "omarchy/plugins").exists())
 
 
 class GestureSetupTests(unittest.TestCase):

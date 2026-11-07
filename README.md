@@ -132,6 +132,29 @@ omarchy-shell shell call okuma.dev_launchpad4omarchy iconDiagnostics ''
 
 Git-managed updates require installation through `omarchy plugin add`.
 
+## Uninstall
+
+If optional gestures were installed, remove the managed binding block before
+removing the plugin files. Use the same `--config` path used during setup:
+
+```bash
+python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/setup-gestures.py remove
+omarchy plugin disable okuma.dev_launchpad4omarchy
+omarchy plugin remove okuma.dev_launchpad4omarchy
+```
+
+Skip the first command if gestures were never configured. If you added the
+optional layer rule or Dock integration manually, remove only those additions
+as described in [integration](docs/integration.md). The gesture helper backs up,
+reloads and validates the selected Hyprland configuration. Stop and resolve any
+reported error before deleting the helper.
+
+Omarchy asks for confirmation before removal. Local-copy installations in the
+standard plugin directory are backed up by Omarchy; external source checkouts
+are not deleted. Do not remove the entire `shell.json` or restore an old whole
+Hyprland config over later user edits. Saved settings and backups are not
+securely erased. No packaged files or services need restoration.
+
 ## Development
 
 ```bash

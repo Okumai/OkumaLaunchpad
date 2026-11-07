@@ -33,6 +33,8 @@ def install(args):
             raise RuntimeError(f"Required command not found: {executable}")
     config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     target = config_home / "omarchy/plugins" / PLUGIN_ID
+    if target.is_symlink():
+        raise RuntimeError(f"Refusing symlink installation target: {target}")
     source_manifest = json.loads((ROOT / "manifest.json").read_text())
     if source_manifest.get("id") != PLUGIN_ID:
         raise RuntimeError("Unexpected source plugin identity")

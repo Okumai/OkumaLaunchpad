@@ -68,6 +68,18 @@ class InstallerTests(unittest.TestCase):
             self.installer.install(self.args(no_gestures=True))
             self.assertFalse(any("setup-gestures.py" in str(c) for c in run.call_args_list))
 
+    def test_symlink_target_is_refused_before_changes(self):
+        outside = self.config_home / "outside"
+        outside.mkdir()
+        target = self.config_home / "omarchy/plugins/okuma.dev_launchpad4omarchy"
+        target.parent.mkdir(parents=True)
+        target.symlink_to(outside, target_is_directory=True)
+        with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run:
+            with self.assertRaisesRegex(RuntimeError, "symlink"):
+                self.installer.install(self.args(no_gestures=True))
+            run.assert_not_called()
+        self.assertEqual(list(outside.iterdir()), [])
+
     def test_conflict_prevents_installation(self):
         config = self.config_home / "hypr/input.lua"
         config.parent.mkdir()

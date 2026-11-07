@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "okuma.dev_launchpad4omarchy",
   "name": "OkumarchyLaunchpad",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "ŌKUMA",
   "description": "A fast, theme-aware fullscreen application launcher for the Omarchy Quickshell desktop.",
   "kinds": ["panel"],

@@ -17,6 +17,21 @@ def run(*args):
     subprocess.run(list(map(str, args)), check=True, timeout=60)
 
 
+def wait_for_registry():
+    # rescanPlugins starts asynchronous discovery; returning from IPC is not completion.
+    for _ in range(40):
+        result = subprocess.run(["omarchy", "plugin", "list", "--json"],
+                                capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            try:
+                if any(plugin.get("id") == PLUGIN_ID for plugin in json.loads(result.stdout)):
+                    return
+            except (ValueError, TypeError, AttributeError):
+                pass
+        time.sleep(0.25)
+    raise RuntimeError("Plugin discovery did not complete after rescan; inspect shell logs")
+
+
 def verify_plugin():
     for _ in range(20):
         result = subprocess.run(["omarchy-shell", "shell", "call", PLUGIN_ID, "status", ""],
@@ -47,7 +62,9 @@ def install(args):
         spec = importlib.util.spec_from_file_location("gesture_setup", ROOT / "setup-gestures.py")
         setup = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(setup)
-        setup.configure(config.read_text(), (ROOT / "examples/hyprland.lua").read_text())
+        source, _ = setup.gesture_source(args.fingers)
+        setup.configure(config.read_text(), source)
+        setup.preflight()
     print(f"Plugin target: {target}", flush=True)
     print("Gestures: " + ("skipped" if args.no_gestures else f"enabled by default; backup and edit {config}"), flush=True)
     print("Plugins run unsandboxed. Existing installations are reused, not overwritten.", flush=True)
@@ -66,13 +83,26 @@ def install(args):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(ROOT, target, ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc", "*.bak", "*.bak.*"))
         print("Installed local snapshot. This copy is not git-managed; see README for managed installations.", flush=True)
-    run("omarchy-shell", "shell", "rescanPlugins")
-    run("omarchy", "plugin", "enable", PLUGIN_ID)
-    verify_plugin()
+    try:
+        run("omarchy-shell", "shell", "rescanPlugins")
+    except subprocess.SubprocessError:
+        print("Rescan IPC was interrupted; waiting for the live registry.", flush=True)
+    wait_for_registry()
+    try:
+        run("omarchy", "plugin", "enable", PLUGIN_ID)
+    except subprocess.SubprocessError:
+        # Loading a panel can transiently interrupt the enable IPC reply after the
+        # setting was saved. Only accept that case if the plugin really responds.
+        verify_plugin()
+        print("Enable IPC was interrupted, but the live plugin is responding.", flush=True)
+    else:
+        verify_plugin()
     if not args.no_gestures:
-        run(sys.executable, ROOT / "setup-gestures.py", "install", "--config", config)
+        run(sys.executable, ROOT / "setup-gestures.py", "install", "--config", config, "--fingers", args.fingers)
     print("Installation complete: plugin responds" + ("; gestures skipped." if args.no_gestures else "; gesture configuration validated."))
-    print("Test a physical four-finger pinch. Hardware pinch support is not guaranteed by configuration validation.")
+    print("OkumarchyDock: updated versions automatically select this live plugin for the Applications button.")
+    print("Existing Dock installations must also be updated; no private launchpad script is needed.")
+    print("Test a physical pinch. Hardware support is not guaranteed by configuration validation.")
 
 
 def main():
@@ -80,6 +110,7 @@ def main():
     parser.add_argument("--no-gestures", action="store_true", help="Do not change Hyprland gesture configuration")
     parser.add_argument("--yes", action="store_true", help="Confirm installation without an interactive prompt")
     parser.add_argument("--config", type=Path, help="Loaded user input.lua path for gesture setup")
+    parser.add_argument("--fingers", type=int, choices=[3, 4], default=4, help="Opening pinch finger count (default: 4)")
     args = parser.parse_args()
     try:
         install(args)

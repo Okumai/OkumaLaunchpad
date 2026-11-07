@@ -43,15 +43,25 @@ class InstallerTests(unittest.TestCase):
         env = patch.dict(os.environ, XDG_CONFIG_HOME=str(self.config_home))
         env.start()
         self.addCleanup(env.stop)
+        preflight = patch.object(self.installer.subprocess, "run")
+        self.preflight_run = preflight.start()
+        self.preflight_run.return_value.returncode = 0
+        self.preflight_run.return_value.stdout = ""
+        self.preflight_run.return_value.stderr = ""
+        self.addCleanup(preflight.stop)
+        registry = patch.object(self.installer, "wait_for_registry")
+        registry.start()
+        self.addCleanup(registry.stop)
 
     def args(self, no_gestures=False):
         import argparse
-        return argparse.Namespace(no_gestures=no_gestures, yes=True, config=None)
+        return argparse.Namespace(no_gestures=no_gestures, yes=True, config=None, fingers=4)
 
     def test_install_default_gestures_and_repeat(self):
         config = self.config_home / "hypr/input.lua"
         config.parent.mkdir()
         config.write_text("-- User settings\n")
+        self.preflight_run.side_effect = lambda cmd, **kw: __import__('subprocess').CompletedProcess(cmd, 0, "ok" if cmd[1] == "eval" else "", "")
         with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run, patch.object(self.installer, "verify_plugin"):
             self.installer.install(self.args())
             target = self.config_home / "omarchy/plugins/okuma.dev_launchpad4omarchy"
@@ -91,6 +101,28 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse((self.config_home / "omarchy/plugins").exists())
 
 
+class InstallerReadinessTests(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("installer_readiness", ROOT / "install.py")
+        self.installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.installer)
+
+    def test_registry_waits_for_asynchronous_scan(self):
+        import subprocess
+        replies = [subprocess.CompletedProcess([], 0, '[]', ''),
+                   subprocess.CompletedProcess([], 0, json.dumps([{"id": self.installer.PLUGIN_ID}]), '')]
+        with patch.object(self.installer.subprocess, "run", side_effect=replies) as run, patch.object(self.installer.time, "sleep") as sleep:
+            self.installer.wait_for_registry()
+            self.assertEqual(run.call_count, 2)
+            sleep.assert_called_once()
+
+    def test_unknown_status_is_not_a_successful_load(self):
+        import subprocess
+        with patch.object(self.installer.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "unknown", "")), patch.object(self.installer.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "did not respond"):
+                self.installer.verify_plugin()
+
+
 class GestureSetupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -106,6 +138,21 @@ class GestureSetupTests(unittest.TestCase):
         removed = self.setup.configure(installed, "", remove=True)
         self.assertNotIn(self.setup.BEGIN, removed)
         self.assertIn("hl.config({})", removed)
+
+    def test_finger_profiles_have_a_single_open_binding_and_marker(self):
+        for fingers in (3, 4):
+            source, digest = self.setup.gesture_source(fingers)
+            self.assertIn(f'fingers = {fingers},', source)
+            self.assertEqual(source.count("shell summon"), 1)
+            self.assertIn(digest, source)
+        source, _ = self.setup.gesture_source(3)
+        self.assertEqual(source.count("hl.gesture({"), 1)
+
+    def test_eval_zero_exit_with_error_is_rejected(self):
+        import subprocess
+        with patch.object(self.setup.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "error: not loaded", "")):
+            with self.assertRaisesRegex(RuntimeError, "not loaded"):
+                self.setup.checked_hyprctl("eval", "assert(false)")
 
     def test_duplicates_and_malformed_blocks(self):
         with self.assertRaises(ValueError):

@@ -65,9 +65,12 @@ Options:
 ./install.sh --no-gestures   # Enable the plugin without changing touchpad bindings.
 ./install.sh --yes          # Explicit consent for unattended installation.
 ./install.sh --config ~/.config/hypr/input.lua
+./install.sh --fingers 3    # For devices without usable four-finger pinch; conflicts with 3-finger drag are possible.
 ```
 
 Gesture setup refuses obvious conflicting pinch bindings and backs up user config.
+Validation now checks that the exact managed block actually ran after reload, not just
+that Hyprland reports no syntax errors. An existing but unloaded `input.lua` is rejected.
 If gesture validation fails, that file is restored. Plugin installation/enabling steps
 already completed are retained and reported; the installer is not a full transaction.
 It never forces a restart of the shared Omarchy shell.
@@ -95,7 +98,14 @@ python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/doctor.py
 python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/setup-gestures.py remove
 ```
 
-See [docs/integration.md](docs/integration.md) for desktop integration details.
+Update **both** Launchpad and [OkumarchyDock](https://github.com/Okumai/Dock).
+Updated Dock Applications buttons select the live Launchpad plugin automatically and
+fall back to the Omarchy menu when it is absent/disabled. This works in either install
+order and with saved default or legacy `launchpad toggle` pins. No home-directory
+script, extra daemon, or copying another device's `shell.json` is needed.
+
+See [docs/integration.md](docs/integration.md) for desktop integration details and
+[the cross-device checklist](docs/portability.md) for diagnosis, deployment, and acceptance tests.
 Plugin updates do not automatically rewrite gesture bindings;
 rerun `bash ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/install.sh` after updating
 to refresh the managed block without duplicating bindings. The plugin never edits

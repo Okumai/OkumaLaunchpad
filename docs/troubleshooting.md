@@ -36,6 +36,20 @@ together without pressing the touchpad button. Three-finger dragging and typing
 suppression can prevent pinch recognition. Do not disable those features globally
 without considering palm rejection and everyday dragging behavior.
 
+## Works on the original machine, not another device
+
+Run `python3 /path/to/OkumarchyLaunchpad/doctor.py` on each machine (pass the same
+`--config` and `--fingers` as the installer). Fix `unknown` plugin status first;
+that is not a touchpad failure. `hyprctl devices` lists pointer devices but does not
+prove pinch support. The doctor also reports udev touchpad classification, the exact
+live binding marker, stale Dock versions, and old standalone Launchpad configuration.
+
+If public IPC opens the grid but gestures do not, verify the loaded marker, conflicts
+in all included files, and physical pinch recognition. Try the explicit three-finger
+profile if four-finger pinch is not reported by the device. Do not grant raw input
+permissions or install another gesture daemon as a first fix. See the legacy migration
+and Dock update instructions in [integration.md](integration.md).
+
 ## Opening feels slow
 
 Use the namespace-specific no-animation rule from `examples/hyprland.lua` to avoid

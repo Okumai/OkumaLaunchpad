@@ -63,10 +63,20 @@ def install(args):
         setup = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(setup)
         source, _ = setup.gesture_source(args.fingers)
-        setup.configure(config.read_text(), source)
+        updated = setup.configure(config.read_text(), source)
+        if not args.no_workspaces:
+            workspace, _ = setup.workspace_source()
+            setup.configure_workspaces(updated, workspace)
         setup.preflight()
+    if not args.no_dock_integration:
+        if target.exists() and not (target / "activate-launchpad.py").is_file():
+            raise RuntimeError("Installed plugin predates Dock integration; update its source first (existing targets are not overwritten)")
+        run(sys.executable, ROOT / "setup-docks.py", "check", "--target", target)
     print(f"Plugin target: {target}", flush=True)
     print("Gestures: " + ("skipped" if args.no_gestures else f"enabled by default; backup and edit {config}"), flush=True)
+    if not args.no_gestures:
+        print("Workspace swipes: " + ("preserve existing bindings" if args.no_workspaces else "install native four-finger horizontal swipe; allow empty numeric neighbors"), flush=True)
+    print("Dock integration: " + ("skipped" if args.no_dock_integration else "user-owned built-in Dock adapter, Launchpad for eligible OkumaDock pins, desktop entry"), flush=True)
     print("Plugins run unsandboxed. Existing installations are reused, not overwritten.", flush=True)
     if not args.yes:
         if not sys.stdin.isatty():
@@ -98,16 +108,22 @@ def install(args):
     else:
         verify_plugin()
     if not args.no_gestures:
-        run(sys.executable, ROOT / "setup-gestures.py", "install", "--config", config, "--fingers", args.fingers)
+        options = [] if args.no_workspaces else ["--workspaces"]
+        run(sys.executable, ROOT / "setup-gestures.py", "install", "--config", config, "--fingers", args.fingers, *options)
+    if not args.no_dock_integration:
+        run(sys.executable, ROOT / "setup-docks.py", "install", "--target", target)
     print("Installation complete: plugin responds" + ("; gestures skipped." if args.no_gestures else "; gesture configuration validated."))
-    print("OkumarchyDock: updated versions automatically select this live plugin for the Applications button.")
-    print("Existing Dock installations must also be updated; no private launchpad script is needed.")
-    print("Test a physical pinch. Hardware support is not guaranteed by configuration validation.")
+    if not args.no_dock_integration:
+        print("Managed Dock entries require Launchpad; explicit alternative preferences/custom pins are preserved.")
+        print("Update old OkumaDock installations too. Other docks can pin Okuma Launchpad or run activate-launchpad.py.")
+    print("Test physical pinch and workspace swipes on each device. Configuration validation does not prove hardware support.")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-gestures", action="store_true", help="Do not change Hyprland gesture configuration")
+    parser.add_argument("--no-workspaces", action="store_true", help="Install pinch only; preserve existing workspace bindings and settings")
+    parser.add_argument("--no-dock-integration", action="store_true", help="Do not install Dock adapters, desktop entry or launcher preference")
     parser.add_argument("--yes", action="store_true", help="Confirm installation without an interactive prompt")
     parser.add_argument("--config", type=Path, help="Loaded user input.lua path for gesture setup")
     parser.add_argument("--fingers", type=int, choices=[3, 4], default=4, help="Opening pinch finger count (default: 4)")

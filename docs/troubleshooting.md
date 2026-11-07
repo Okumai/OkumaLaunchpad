@@ -14,6 +14,33 @@ The plugin must be enabled and the current Omarchy shell must support keep-loade
 panels and `qs.Commons`. Inspect the running shell's Quickshell logs for QML errors.
 Only restart the shell when necessary; it also hosts the bar and other plugins.
 
+## Dock opens the system launcher instead
+
+The stock Dock's button has a private AppGrid; changing `omarchy.menu` pins cannot
+replace it. Update the installed Launchpad source (not only the checkout), then run:
+
+```bash
+python3 ~/.config/omarchy/plugins/okuma.dev_launchpad4omarchy/setup-docks.py install
+omarchy-shell omarchy.dock launchpadIntegration
+```
+
+The second command must return `okuma-launchpad-v1`. If setup rejects a changed stock
+source, custom Dock clone or locally edited managed files, review the conflict rather
+than deleting ownership state or patching `/usr/share/omarchy/`. The adapter is a
+snapshot: refresh it after Omarchy updates. An interrupted rescan is checked against
+the actual live marker; persistent failure is not treated as success. Only deliberately
+restart the shared shell if logs show stale/cached QML. The adapter retains stock Dock
+visibility on floating workspaces; it does not make that Dock appear everywhere.
+
+For OkumaDock, update its actual installed source too. Its status should report
+`launcherPlugin: okuma.dev_launchpad4omarchy` after integration. Explicit custom pins and alternative launcher preferences
+are preserved, so inspect them if an entry still launches something else.
+Installing OkumaDock later uses its default `auto`; rerun Dock setup to require
+Launchpad. The strict helper reports a disabled/missing Launchpad instead of opening
+another launcher. Other docks must pin `Okuma Launchpad` or configure the documented
+activation command; there is no universal interception of a hardcoded internal grid.
+Run `setup-docks.py remove` before uninstalling Launchpad to restore previous routing.
+
 ## Icons are blank or generic
 
 ```bash
@@ -49,6 +76,36 @@ in all included files, and physical pinch recognition. Try the explicit three-fi
 profile if four-finger pinch is not reported by the device. Do not grant raw input
 permissions or install another gesture daemon as a first fix. See the legacy migration
 and Dock update instructions in [integration.md](integration.md).
+
+## Four-finger left/right swipe does not switch workspaces
+
+This is Hyprland workspace integration, not Dock activation. Older setup installed
+pinch only, and Omarchy's commented three-finger example is not an active binding.
+Run `doctor.py` to distinguish missing managed workspace bindings, a manual binding,
+wrong live options and the absence of another workspace.
+
+For a fresh configuration after updating the source:
+
+```bash
+python3 /path/to/OkumarchyLaunchpad/setup-gestures.py install --workspaces
+hyprctl configerrors
+```
+
+If setup detects an existing horizontal/swipe binding, do not add another blindly.
+Review all includes and migrate only the exact manual workspace binding, or retain
+it and use `install.sh --no-workspaces`. A modified-only binding does not handle an
+unmodified swipe. A catch-all `swipe`, left/right focus binding or dynamic Lua may
+intercept the same fingers; static checks cannot prove arbitrary Lua conflict-free.
+
+The managed profile enables numeric neighbors and new empty workspaces. Test with
+Launchpad closed, outside a remote desktop/game, no modifiers pressed, and all four
+fingers touching before moving. A short/slow movement may animate then snap back
+because of the swipe distance/cancellation threshold; that differs from no response.
+Try a deliberate longer horizontal motion before adjusting sensitivity. Natural
+scroll direction does not select the workspace gesture's inverse direction.
+Do not disable dragging/typing suppression or bypass shortcut inhibition globally.
+`--fingers 3` only changes Launchpad pinch; it does not fix missing four-finger swipe
+events from hardware. See [integration.md](integration.md) for migration and tests.
 
 ## Opening feels slow
 

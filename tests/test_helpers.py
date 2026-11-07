@@ -55,7 +55,7 @@ class InstallerTests(unittest.TestCase):
 
     def args(self, no_gestures=False):
         import argparse
-        return argparse.Namespace(no_gestures=no_gestures, yes=True, config=None, fingers=4)
+        return argparse.Namespace(no_gestures=no_gestures, no_workspaces=False, no_dock_integration=False, yes=True, config=None, fingers=4)
 
     def test_install_default_gestures_and_repeat(self):
         config = self.config_home / "hypr/input.lua"
@@ -67,7 +67,9 @@ class InstallerTests(unittest.TestCase):
             target = self.config_home / "omarchy/plugins/okuma.dev_launchpad4omarchy"
             self.assertTrue((target / "manifest.json").is_file())
             self.assertFalse((target / ".git").exists())
-            self.assertTrue(any("setup-gestures.py" in str(c) for c in run.call_args_list))
+            gesture_calls = [c for c in run.call_args_list if "setup-gestures.py" in str(c)]
+            self.assertEqual(len(gesture_calls), 1)
+            self.assertIn("--workspaces", gesture_calls[0].args)
             sentinel = target / "preserve.txt"
             sentinel.write_text("Keep local changes")
             self.installer.install(self.args())
@@ -77,6 +79,36 @@ class InstallerTests(unittest.TestCase):
         with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run, patch.object(self.installer, "verify_plugin"):
             self.installer.install(self.args(no_gestures=True))
             self.assertFalse(any("setup-gestures.py" in str(c) for c in run.call_args_list))
+
+    def test_existing_workspace_binding_blocks_default_but_pinch_only_preserves_it(self):
+        config = self.config_home / "hypr/input.lua"
+        config.parent.mkdir()
+        original = 'hl.gesture({fingers=4, direction="horizontal", action="workspace"})\n'
+        config.write_text(original)
+        self.preflight_run.side_effect = lambda cmd, **kw: __import__('subprocess').CompletedProcess(cmd, 0, "ok" if cmd[1] == "eval" else "", "")
+        with patch.object(self.installer.shutil, "which", return_value="available"), patch.object(self.installer, "run") as run, patch.object(self.installer, "verify_plugin"):
+            with self.assertRaisesRegex(ValueError, "four-finger"):
+                self.installer.install(self.args())
+            run.assert_not_called()
+            self.assertEqual(config.read_text(), original)
+            args = self.args()
+            args.no_workspaces = True
+            self.installer.install(args)
+            gesture_calls = [c for c in run.call_args_list if "setup-gestures.py" in str(c)]
+            self.assertNotIn("--workspaces", gesture_calls[0].args)
+
+    def test_dock_integration_defaults_and_opt_out(self):
+        install = self.installer
+        with tempfile.TemporaryDirectory() as directory:
+            args = self.args(no_gestures=True)
+            with patch.dict(os.environ, XDG_CONFIG_HOME=directory), patch.object(install.shutil, "which", return_value="/bin/true"), patch.object(install, "run") as run, patch.object(install, "wait_for_registry"), patch.object(install, "verify_plugin"):
+                install.install(args)
+            self.assertEqual([c.args[2] for c in run.call_args_list if len(c.args) > 2 and str(c.args[1]).endswith("setup-docks.py")], ["check", "install"])
+        with tempfile.TemporaryDirectory() as directory:
+            args.no_dock_integration = True
+            with patch.dict(os.environ, XDG_CONFIG_HOME=directory), patch.object(install.shutil, "which", return_value="/bin/true"), patch.object(install, "run") as run, patch.object(install, "wait_for_registry"), patch.object(install, "verify_plugin"):
+                install.install(args)
+            self.assertFalse(any("setup-docks.py" in str(c.args) for c in run.call_args_list))
 
     def test_symlink_target_is_refused_before_changes(self):
         outside = self.config_home / "outside"

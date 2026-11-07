@@ -55,6 +55,12 @@ def main():
             print("Dock predates automatic Launchpad integration; update OkumarchyDock too.")
     except (ValueError, TypeError):
         print("Dock is not responding or is not installed.")
+    probe("Built-in Dock Launchpad adapter (expected okuma-launchpad-v1)",
+          ["omarchy-shell", "omarchy.dock", "launchpadIntegration"])
+    data_home = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    desktop = data_home / "applications/okuma-launchpad.desktop"
+    print("Launchpad desktop entry:", desktop, "present:", desktop.is_file())
+    print("For other docks, pin this entry or configure the installed activate-launchpad.py helper; icon names alone do not select a launcher.")
     path = args.config or config_home / "hypr/input.lua"
     print(f"\n## Gesture config: {path}")
     text = path.read_text() if path.is_file() else ""
@@ -62,9 +68,36 @@ def main():
     setup = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup)
     _, digest = setup.gesture_source(args.fingers)
-    print("Managed bindings present:", setup.BEGIN in text)
-    probe("Exact managed block loaded (expected ok)", ["hyprctl", "eval",
+    print("Managed pinch bindings present:", setup.BEGIN in text)
+    probe("Exact managed pinch block loaded (expected ok)", ["hyprctl", "eval",
           f'assert(_G.okuma_launchpad_gestures == "{digest}", "Managed gesture block missing, outdated or not loaded")'])
+    print("\n## Four-finger horizontal workspace integration")
+    workspace, workspace_digest = setup.workspace_source()
+    managed_workspaces = setup.WORKSPACE_BEGIN in text
+    print("Managed workspace bindings present:", managed_workspaces)
+    if managed_workspaces:
+        probe("Exact workspace block loaded (expected ok)", ["hyprctl", "eval",
+              f'assert(_G.okuma_launchpad_workspaces == "{workspace_digest}", "Workspace block missing, outdated or not loaded")'])
+    else:
+        print("No managed workspace swipe installed. Pinch support alone does NOT enable workspace switching.")
+        print("For a fresh config: setup-gestures.py install --workspaces; review existing bindings first.")
+    try:
+        setup.configure_workspaces(text, workspace)
+    except ValueError as error:
+        print("Manual workspace binding/conflict:", error)
+        print("Do not add a duplicate. Inspect the existing action, finger count, modifiers and includes.")
+    for candidate in sorted((config_home / "hypr").rglob("*.lua")):
+        try:
+            active = setup.active_lua(candidate.read_text())
+            if "gesture" in active and any(word in active for word in ('"workspace"', "'workspace'", '"horizontal"', "'horizontal'", '"swipe"', "'swipe'")):
+                print(f"Workspace/swipe config candidate (not proof of loading): {candidate}")
+        except OSError:
+            pass
+    for option in ("workspace_swipe_use_r", "workspace_swipe_create_new", "workspace_swipe_distance",
+                   "workspace_swipe_cancel_ratio", "workspace_swipe_invert"):
+        probe(f"Live gestures:{option}", ["hyprctl", "getoption", f"gestures:{option}"])
+    probe("Existing workspaces (one workspace with create_new=false can look unresponsive)", ["hyprctl", "workspaces", "-j"])
+    probe("Focused workspace", ["hyprctl", "activeworkspace", "-j"])
     autostart = config_home / "hypr/autostart.lua"
     autostart_text = autostart.read_text() if autostart.is_file() else ""
     if "/.local/bin/launchpad" in text or 'qs -c launchpad' in autostart_text:
